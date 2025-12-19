@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Payment Confirmation</title>
+    <style>
+      body {
+        background-color: #f9fafb;
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #333333;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        max-width: 600px;
+        background-color: #ffffff;
+        margin: 40px auto;
+        padding: 30px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        text-align: center;
+      }
+
+      .logo {
+        max-width: 180px;
+        margin-bottom: 15px;
+      }
+
+      .success-icon {
+        font-size: 50px;
+        color: #22c55e;
+        margin-bottom: 10px;
+      }
+
+      .title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 20px;
+      }
+
+      .highlight {
+        font-weight: bold;
+        color: #111827;
+      }
+
+      p {
+        margin: 8px 0;
+      }
+
+      .cta {
+        display: inline-block;
+        margin-top: 25px;
+        padding: 12px 24px;
+        background-color: #facc15;
+        color: #000;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: background-color 0.3s ease;
+      }
+
+      .cta:hover {
+        background-color: #fbbf24;
+      }
+
+      .footer {
+        font-size: 14px;
+        color: #6b7280;
+        margin-top: 30px;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 15px;
+      }
+
+      a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <img
+        class="logo"
+        src="https://studynotion-edtech-project.vercel.app/globe.svg"
+        alt="StudyNotion Logo"
+      />
+
+      <div class="success-icon">✅</div>
+
+      <div class="title">Payment Successful!</div>
+
+      <p>Dear <span class="highlight"><%= name %></span>,</p>
+      <p>
+        Thank you for purchasing
+        <span class="highlight"><%= courseName %></span>.
+      </p>
+      <p>
+        We’ve successfully received your payment of
+        <span class="highlight">₹<%= amount %></span>.
+      </p>
+      <p>💳 Payment ID: <b><%= paymentId %></b></p>
+      <p>🧾 Order ID: <b><%= orderId %></b></p>
+
+      <a
+        class="cta"
+        href="https://studynotion-edtech-project.vercel.app/"
+        target="_blank"
+        >Start Learning Now</a
+      >
+
+      <div class="footer">
+        If you have any questions, contact us at
+        <a href="mailto:kashikoder@gmail.com">kashikoder@gmail.com</a><br />
+        © <%= new Date().getFullYear() %> StudyNotion. All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>

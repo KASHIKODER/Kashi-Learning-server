@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Order Confirmation</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Roboto, Arial, sans-serif;
+        background-color: #f9fafb;
+        margin: 0;
+        padding: 0;
+        color: #333;
+      }
+
+      .container {
+        max-width: 650px;
+        background: #ffffff;
+        margin: 40px auto;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 25px;
+      }
+
+      .logo {
+        max-width: 160px;
+        margin-bottom: 10px;
+      }
+
+      h1 {
+        font-size: 24px;
+        color: #1e40af;
+        margin-bottom: 8px;
+      }
+
+      p {
+        font-size: 16px;
+        line-height: 1.6;
+        text-align: center;
+      }
+
+      h4 {
+        margin-top: 30px;
+        font-size: 18px;
+        color: #111827;
+        border-bottom: 2px solid #e5e7eb;
+        padding-bottom: 8px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+      }
+
+      th,
+      td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+        font-size: 15px;
+      }
+
+      th {
+        background-color: #f3f4f6;
+        font-weight: 600;
+      }
+
+      .total-row td {
+        font-weight: bold;
+        border-top: 2px solid #d1d5db;
+      }
+
+      .cta {
+        display: inline-block;
+        background-color: #facc15;
+        color: #000;
+        padding: 12px 24px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: background-color 0.3s ease;
+        margin-top: 25px;
+      }
+
+      .cta:hover {
+        background-color: #fbbf24;
+      }
+
+      .footer {
+        margin-top: 40px;
+        text-align: center;
+        font-size: 14px;
+        color: #6b7280;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 15px;
+      }
+
+      .footer a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header">
+        <img
+          class="logo"
+          src="https://studynotion-edtech-project.vercel.app/globe.svg"
+          alt="StudyNotion Logo"
+        />
+        <h1>🎉 Order Confirmed!</h1>
+        <p>Thank you for purchasing your course with <strong>StudyNotion</strong>.</p>
+      </div>
+
+      <h4>Order Details</h4>
+      <table>
+        <tr>
+          <td><strong>Order #:</strong> <%= order._id %></td>
+          <td><strong>Date:</strong> <%= order.date %></td>
+        </tr>
+      </table>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><%= order.name %></td>
+            <td>1</td>
+            <td>₹<%= order.price %></td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="2">Subtotal</td>
+            <td>₹<%= order.price %></td>
+          </tr>
+          <tr class="total-row">
+            <td colspan="2">Total</td>
+            <td>₹<%= order.price %></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="text-align: center;">
+        <a
+          href="https://studynotion-edtech-project.vercel.app/"
+          target="_blank"
+          class="cta"
+          >Start Learning Now</a
+        >
+      </div>
+
+      <div class="footer">
+        <p>
+          Have questions? Contact us at
+          <a href="mailto:support@kashikoder.com">support@kashikoder.com</a>
+        </p>
+        <p>© <%= new Date().getFullYear() %> StudyNotion. All rights reserved.</p>
+      </div>
+    </div>
+  </body>
+</html>
