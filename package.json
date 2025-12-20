@@ -5,8 +5,8 @@
   "main": "build/server.js",
   "description": "",
   "engines": {
-    "node": "18.x"
-  },
+  "node": ">=20.0.0 <21.0.0"
+},
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
     "start": "node build/server.js",

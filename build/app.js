@@ -21,8 +21,8 @@ const layout_route_1 = __importDefault(require("./routes/layout.route"));
 const express_rate_limit_1 = require("express-rate-limit");
 exports.app = (0, express_1.default)();
 // Get the correct path to client build folder
-const __dirname = path_1.default.resolve();
-const clientDistPath = path_1.default.join(__dirname, "client", "dist");
+const _dirname = path_1.default.resolve();
+const clientDistPath = path_1.default.join(_dirname, "client", "dist");
 console.log("Client dist path:", clientDistPath); // Debug line
 // Debug: Check if client dist exists
 if (!fs_1.default.existsSync(clientDistPath)) {

@@ -19,8 +19,8 @@ import { rateLimit } from 'express-rate-limit'
 export const app = express();
 
 // Get the correct path to client build folder
-const __dirname = path.resolve();
-const clientDistPath = path.join(__dirname, "client", "dist");
+const _dirname = path.resolve();
+const clientDistPath = path.join(_dirname, "client", "dist");
 
 console.log("Client dist path:", clientDistPath); // Debug line
 
