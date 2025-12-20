@@ -23,7 +23,7 @@ app.use(cookieParser());
 
 // ✅ CORS Configuration
 const corsOptions = {
-  origin: ["https://kashi-learning-client.vercel.app/"],
+  origin: ["https://kashi-learning-client.vercel.app"],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Accept'],
