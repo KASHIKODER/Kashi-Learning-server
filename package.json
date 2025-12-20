@@ -2,11 +2,18 @@
   "name": "server",
   "version": "1.0.0",
   "type": "commonjs",
-  "main": "server.ts",
+  "main": "build/server.js",
+  "description": "",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only server.ts",
+    "start": "node build/server.js",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "build:start": "npm run build && npm start",
+    "client-install": "npm install --prefix client",
+    "dev:both": "concurrently \"npm run dev\" \"npm start --prefix client\""
   },
   "author": "KASHI KODER",
   "license": "ISC",
@@ -30,6 +37,7 @@
     "ejs": "^3.1.10",
     "express": "^4.21.2",
     "express-rate-limit": "^8.2.1",
+    "install": "^0.13.0",
     "io": "^1.5.7",
     "ioredis": "^5.7.0",
     "jsonwebtoken": "^9.0.2",

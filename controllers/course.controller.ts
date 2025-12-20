@@ -15,6 +15,19 @@ import axios from "axios";
 import courseModel from "../models/course.model";
 import userModel from "../models/user.model";
 
+// Add this interface at the top
+interface IUserWithCourses {
+  _id?: string | mongoose.Types.ObjectId;
+  id?: string;
+  email?: string;
+  role?: string;
+  name?: string;
+  courses?: Array<{
+    courseId?: mongoose.Types.ObjectId | string;
+    _id?: mongoose.Types.ObjectId | string;
+    purchasedAt?: Date;
+  }>;
+}
 
 export const uploadCourse = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -45,8 +58,6 @@ export const uploadCourse = CatchAsyncError(async (req: Request, res: Response, 
         return next(new ErrorHandler(error.message, 500));
     }
 });
-
-
 
 export const editCourse = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -92,9 +103,6 @@ export const editCourse = CatchAsyncError(
     }
   }
 );
-
-
-
 
 export const getSingleCourse = CatchAsyncError(
     async (req: Request, res: Response, next: NextFunction) => {
@@ -148,7 +156,8 @@ export const getAllCourses = CatchAsyncError(
 export const getCourseByUser = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?._id;
+      const user = req.user as IUserWithCourses;
+      const userId = user?._id;
       const courseId = req.params.id;
 
       if (!userId) {
@@ -156,30 +165,27 @@ export const getCourseByUser = CatchAsyncError(
       }
 
       // ✅ Fresh user from DB
-      const user = await userModel
+      const freshUser = await userModel
         .findById(userId)
         .select("courses role email name");
-      if (!user) {
+      if (!freshUser) {
         return next(new ErrorHandler("User not found", 404));
       }
 
       console.log("🔎 getCourseByUser:", {
-        userId: user._id,
-        role: (user as any).role,
+        userId: freshUser._id,
+        role: freshUser.role,
         courseId,
-        courses: user.courses,
+        courses: freshUser.courses,
       });
 
-      const isAdmin = (user as any).role === "admin";
+      const isAdmin = freshUser.role === "admin";
 
       // ✅ Normal user ke liye: enrollment check
       if (!isAdmin) {
-        const courseExists = user.courses?.some((course: any) => {
-          const byCourseId =
-            course.courseId &&
-            course.courseId.toString() === courseId.toString();
-          const byOwnId =
-            course._id && course._id.toString() === courseId.toString();
+        const courseExists = freshUser.courses?.some((course: any) => {
+          const byCourseId = course.courseId && course.courseId.toString() === courseId.toString();
+          const byOwnId = course._id && course._id.toString() === courseId.toString();
           return byCourseId || byOwnId;
         });
 
@@ -241,7 +247,7 @@ export const addQuestion = CatchAsyncError(
             courseContent.questions.push(newQuestion);
 
             await NotificationModel.create({
-                user: req.user?._id,
+                user: (req.user as IUserWithCourses)?._id,
                 title: "New Question Received",
                 message: `You have a new question in ${courseContent.title}`,
             });
@@ -306,10 +312,14 @@ export const addAnswer = CatchAsyncError(async(req: Request, res: Response, next
         question.questionReplies?.push(newAnswer);
         await course?.save();
 
-        if(req.user?._id === question.user._id){
+        // FIXED: Type-safe comparison with string conversion
+        const userId = (req.user as IUserWithCourses)?._id?.toString();
+        const questionUserId = question.user._id?.toString();
+        
+        if(userId && questionUserId && userId === questionUserId){
             // create a notification
             await NotificationModel.create({
-                user: req.user?._id,
+                user: userId,
                 title: "New Question Reply Received",
                 message: `You have a new question reply in ${courseContent.title}`
             })
@@ -349,11 +359,16 @@ interface IAddReviewData{
 
 export const addReview = CatchAsyncError(async (req: Request , res: Response , next: NextFunction)=>{
     try{
-        const userCourseList = req.user?.courses;
+        const user = req.user as IUserWithCourses;
+        const userCourseList = user?.courses; // FIXED: Now TypeScript knows courses exists
 
         const courseId = req.params.id;
 
-        const courseExists = userCourseList?.some((course:any) => course._id.toString() === courseId.toString());
+        const courseExists = userCourseList?.some((course:any) => {
+            const courseIdStr = course._id?.toString();
+            const paramIdStr = courseId.toString();
+            return courseIdStr === paramIdStr;
+        });
 
         if(!courseExists){
             return next(new ErrorHandler("You are not eligible to access this course", 404))
@@ -385,7 +400,7 @@ export const addReview = CatchAsyncError(async (req: Request , res: Response , n
 
         const notification = {
             title: "New Review Received",
-            message: `${req.user?.name} has given a review in ${course?.name}`,
+            message: `${user?.name} has given a review in ${course?.name}`,
         };
 
         res.status(200).json({
@@ -398,7 +413,7 @@ export const addReview = CatchAsyncError(async (req: Request , res: Response , n
 }
 );
 
-interface IAddReviewData{
+interface IAddReviewReplyData{
     comment: string;
     courseId: string;
     reviewId: string;
@@ -407,7 +422,7 @@ interface IAddReviewData{
 export const addReplyToReview = CatchAsyncError(
     async(req: Request, res: Response , next: NextFunction) =>{
         try{
-            const { comment, courseId, reviewId } = req.body as IAddReviewData;
+            const { comment, courseId, reviewId } = req.body as IAddReviewReplyData;
 
             const course = await CourseModel.findById(courseId);
 
@@ -416,7 +431,7 @@ export const addReplyToReview = CatchAsyncError(
             }
 
             const review = course?.reviews?.find(
-                (rev: any) => rev._id.toStrong() === reviewId
+                (rev: any) => rev._id.toString() === reviewId // FIXED: toStrong -> toString
             );
 
             if(!review){
@@ -481,7 +496,6 @@ export const deleteCourse = CatchAsyncError(
     }
 );
 
-// In your course.controller.ts - Make sure this exists
 export const generateVideoUrl = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { videoId } = req.body;
@@ -563,25 +577,22 @@ export const generateVideoUrl = CatchAsyncError(async (req: Request, res: Respon
   }
 });
 
-// ------------------------------------------------------
-//  Enroll Course Controller
-// ------------------------------------------------------
-
 export const enrollCourse = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = req.user?._id;
+        const user = req.user as IUserWithCourses;
+        const userId = user?._id;
         const courseId = req.params.id;
 
         if (!userId) return next(new ErrorHandler("Unauthorized user", 401));
 
-        const user = await userModel.findById(userId);
-        if (!user) return next(new ErrorHandler("User not found", 404));
+        const freshUser = await userModel.findById(userId);
+        if (!freshUser) return next(new ErrorHandler("User not found", 404));
 
         const course = await courseModel.findById(courseId);
         if (!course) return next(new ErrorHandler("Course not found", 404));
 
         // Already enrolled check: compare ObjectId strings
-        const alreadyEnrolled = user.courses.some((c: any) => {
+        const alreadyEnrolled = freshUser.courses.some((c: any) => {
             if (c.courseId) return c.courseId.toString() === courseId.toString();
             if (c._id) return c._id.toString() === courseId.toString();
             return false;
@@ -591,12 +602,12 @@ export const enrollCourse = CatchAsyncError(async (req: Request, res: Response, 
         }
 
         // Push courseId as ObjectId
-        user.courses.push({
+        freshUser.courses.push({
             courseId: new mongoose.Types.ObjectId(courseId),
             purchasedAt: new Date(),
         });
 
-        await user.save();
+        await freshUser.save();
 
         res.status(200).json({
             success: true,
@@ -606,11 +617,12 @@ export const enrollCourse = CatchAsyncError(async (req: Request, res: Response, 
         return next(new ErrorHandler(err.message, 400));
     }
 });
-// Add this to your course.controller.ts
+
 export const getCourseContent = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user?._id;
+      const user = req.user as IUserWithCourses;
+      const userId = user?._id;
       const courseId = req.params.id;
 
       if (!userId) {
@@ -618,26 +630,26 @@ export const getCourseContent = CatchAsyncError(
       }
 
       // ✅ Fresh user from DB
-      const user = await userModel
+      const freshUser = await userModel
         .findById(userId)
         .select("courses role email name");
       
-      if (!user) {
+      if (!freshUser) {
         return next(new ErrorHandler("User not found", 404));
       }
 
       console.log("🔎 getCourseContent - User Check:", {
-        userId: user._id,
-        role: (user as any).role,
+        userId: freshUser._id,
+        role: freshUser.role,
         courseId,
-        userCourses: user.courses?.length || 0,
+        userCourses: freshUser.courses?.length || 0,
       });
 
-      const isAdmin = (user as any).role === "admin";
+      const isAdmin = freshUser.role === "admin";
 
       // ✅ Normal user ke liye: enrollment check
       if (!isAdmin) {
-        const courseExists = user.courses?.some((course: any) => {
+        const courseExists = freshUser.courses?.some((course: any) => {
           const byCourseId = course.courseId && course.courseId.toString() === courseId.toString();
           const byOwnId = course._id && course._id.toString() === courseId.toString();
           return byCourseId || byOwnId;

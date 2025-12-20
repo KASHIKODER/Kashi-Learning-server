@@ -23,7 +23,7 @@ interface ICourseData extends Document {
   title: string;
   description: string;
   videoUrl: string;
-  videoThumbnail: string;
+  videoThumbnail?: string;
   videoSection: string;
   videoLength: number;
   videoPlayer: string;
