@@ -12,25 +12,27 @@ exports.accessTokenOptions = {
     expires: new Date(Date.now() + accessTokenExpire * 60 * 1000), // minutes to milliseconds
     maxAge: accessTokenExpire * 60 * 1000,
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'none',
+    secure: true
 };
 exports.refreshTokenOptions = {
     expires: new Date(Date.now() + refreshTokenExpire * 24 * 60 * 60 * 1000), // days to milliseconds
     maxAge: refreshTokenExpire * 24 * 60 * 60 * 1000,
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'none',
+    secure: true
 };
 const sendToken = async (user, statusCode, res) => {
     const accessToken = user.SignAccessToken();
     const refreshToken = user.SignRefreshToken();
     // ✅ Redis expiry set for 7 days
     await redis_1.redis.set(String(user._id), JSON.stringify(user), 'EX', 7 * 24 * 60 * 60);
-    // Set secure flag based on environment
-    const isProduction = process.env.NODE_ENV === 'production';
-    const accessTokenCookieOptions = { ...exports.accessTokenOptions, secure: isProduction };
-    const refreshTokenCookieOptions = { ...exports.refreshTokenOptions, secure: isProduction };
-    res.cookie("access_token", accessToken, accessTokenCookieOptions);
-    res.cookie("refresh_token", refreshToken, refreshTokenCookieOptions);
+    // // Set secure flag based on environment
+    // const isProduction = process.env.NODE_ENV === 'production';
+    // const accessTokenCookieOptions = { ...accessTokenOptions, secure: isProduction };
+    // const refreshTokenCookieOptions = { ...refreshTokenOptions, secure: isProduction };
+    res.cookie("access_token", accessToken, exports.accessTokenOptions);
+    res.cookie("refresh_token", refreshToken, exports.refreshTokenOptions);
     res.status(statusCode).json({
         success: true,
         accessToken,
