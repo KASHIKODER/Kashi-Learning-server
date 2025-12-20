@@ -4,7 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "./build",
-    "rootDir": "../Server",  // Changed from "./" to "./Server"
+    "rootDir": ".",  // Change this from "../Server" to "."
     "esModuleInterop": true,
     "strict": true,
     "resolveJsonModule": true,
@@ -12,5 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
     "declaration": false
-  }
+  },
+  "include": ["*.ts", "**/*.ts"],  // Add this to include all TypeScript files
+  "exclude": ["node_modules", "build", "client"]  // Add this to exclude unwanted folders
 }
