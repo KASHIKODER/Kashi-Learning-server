@@ -1,3 +1,4 @@
+// serve.ts
 import { app } from "./app";
 import { v2 as cloudinary } from "cloudinary";
 import http from "http";
@@ -23,8 +24,6 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
-const server = http.createServer(app);
-
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME!,
@@ -32,19 +31,33 @@ cloudinary.config({
   api_secret: process.env.CLOUD_API_SECRET!,
 });
 
+const server = http.createServer(app);
+
 // Initialize Socket.IO
 initSocketServer(server);
 
 const PORT = process.env.PORT || 8000;
 
-// Start server
-server.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  connectDB().catch((error) => {
-    console.error("❌ Failed to connect to database:", error);
+// 🔥 FIX: Connect to DB BEFORE starting server
+const startServer = async () => {
+  try {
+    console.log('🔗 Connecting to MongoDB...');
+    await connectDB();  // Wait for DB connection
+    
+    console.log(`✅ MongoDB connected. Starting server...`);
+    
+    server.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    });
+
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
     process.exit(1);
-  });
-});
+  }
+};
+
+// Start the server
+startServer();
 
 // Handle server errors
 server.on('error', (error: Error) => {
