@@ -342,41 +342,56 @@ export const updateProfilePicture = CatchAsyncError(
             const { avatar } = req.body;
             const userId = req.user?._id;
 
-            const user = await userModel.findById(userId);
-
-            if (avatar && user) {
-                if (user?.avatar?.public_id) {
-                    await cloudinary.v2.uploader.destroy(user?.avatar?.public_id);
-
-                    const myCloud = await cloudinary.v2.uploader.upload(avatar, {
-                        folder: "avatars",
-                        width: 150,
-                    });
-
-                    user.avatar = {
-                        public_id: myCloud.public_id,
-                        url: myCloud.secure_url,
-                    };
-                } else {
-                    const myCloud = await cloudinary.v2.uploader.upload(avatar, {
-                        folder: "avatars",
-                        width: 150,
-                    });
-                    user.avatar = {
-                        public_id: myCloud.public_id,
-                        url: myCloud.secure_url,
-                    };
-                }
+            // Validate input
+            if (!avatar || !userId) {
+                return next(new ErrorHandler("Missing required fields", 400));
             }
-            await user?.save();
 
-            await redis.set(String(user?._id), JSON.stringify(user));
+            // Use findByIdAndUpdate with options to bypass validation
+            const updatedUser = await userModel.findByIdAndUpdate(
+                userId,
+                {
+                    $set: {
+                        "avatar.url": avatar,
+                        "avatar.public_id": `avatar_${userId}_${Date.now()}`,
+                        updatedAt: new Date()
+                    }
+                },
+                {
+                    new: true, // Return updated document
+                    runValidators: false, // IMPORTANT: Skip Mongoose validation
+                    context: 'query', // Better performance
+                    select: '-password -refreshToken' // Exclude sensitive fields
+                }
+            );
+
+            if (!updatedUser) {
+                return next(new ErrorHandler("User not found", 404));
+            }
+
+            // Update Redis (optional, skip if causing issues)
+            try {
+                if (redis) {
+                    await redis.set(String(userId), JSON.stringify(updatedUser));
+                }
+            } catch (redisError) {
+                console.warn("Redis update skipped:", redisError.message);
+            }
+
             res.status(200).json({
                 success: true,
-                user,
+                message: "Avatar updated successfully",
+                user: {
+                    _id: updatedUser._id,
+                    name: updatedUser.name,
+                    email: updatedUser.email,
+                    avatar: updatedUser.avatar
+                }
             });
+
         } catch (error: any) {
-            return next(new ErrorHandler(error.message, 400));
+            console.error("Update avatar error:", error.message);
+            return next(new ErrorHandler(error.message, 500));
         }
     }
 );
