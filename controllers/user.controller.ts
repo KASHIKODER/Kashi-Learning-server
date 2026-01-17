@@ -145,31 +145,31 @@ export const loginUser = CatchAsyncError(
     });
 
 export const logoutUser = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const cookieOptions = {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "none" as const,
-        path: "/", // must match how cookies were set
-      };
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const cookieOptions = {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "none" as const,
+                path: "/", // must match how cookies were set
+            };
 
-      // ✅ Properly clear cookies
-      res.clearCookie("access_token", cookieOptions);
-      res.clearCookie("refresh_token", cookieOptions);
+            // ✅ Properly clear cookies
+            res.clearCookie("access_token", cookieOptions);
+            res.clearCookie("refresh_token", cookieOptions);
 
-      const userId = req.user?._id?.toString();
-      if (userId) await redis.del(userId);
+            const userId = req.user?._id?.toString();
+            if (userId) await redis.del(userId);
 
-      return res.status(200).json({
-        success: true,
-        message: "Logged out successfully",
-      });
-    } catch (error: any) {
-      console.error("Logout error:", error);
-      return next(new ErrorHandler(error.message, 400));
+            return res.status(200).json({
+                success: true,
+                message: "Logged out successfully",
+            });
+        } catch (error: any) {
+            console.error("Logout error:", error);
+            return next(new ErrorHandler(error.message, 400));
+        }
     }
-  }
 );
 
 
@@ -177,13 +177,13 @@ export const updateAccessToken = CatchAsyncError(
     async (req: Request, res: Response, next: NextFunction) => {
         try {
             const refresh_token = req.cookies.refresh_token as string;
-            
+
             if (!refresh_token) {
                 return next(new ErrorHandler("Please login to access this resource", 401));
             }
 
             const decoded = jwt.verify(refresh_token, process.env.REFRESH_TOKEN as string) as JwtPayload;
-            
+
             if (!decoded || !decoded._id) {
                 return next(new ErrorHandler("Invalid refresh token", 401)); // Fixed this line
             }
@@ -196,14 +196,14 @@ export const updateAccessToken = CatchAsyncError(
             const user = JSON.parse(session);
 
             const accessToken = jwt.sign(
-                { _id: user._id }, 
-                process.env.ACCESS_TOKEN as string, 
+                { _id: user._id },
+                process.env.ACCESS_TOKEN as string,
                 { expiresIn: "5m" }
             );
 
             const refreshToken = jwt.sign(
-                { _id: user._id }, 
-                process.env.REFRESH_TOKEN as string, 
+                { _id: user._id },
+                process.env.REFRESH_TOKEN as string,
                 { expiresIn: "3d" }
             );
 
@@ -218,15 +218,15 @@ export const updateAccessToken = CatchAsyncError(
 
         } catch (error: any) {
             console.error("Token refresh error:", error.message);
-            
+
             if (error.name === 'TokenExpiredError') {
                 return next(new ErrorHandler("Refresh token expired, please login again", 401));
             }
-            
+
             if (error.name === 'JsonWebTokenError') {
                 return next(new ErrorHandler("Invalid refresh token", 401));
             }
-            
+
             return next(new ErrorHandler(error.message, 400));
         }
     }
@@ -332,13 +332,17 @@ export const updatePassword = CatchAsyncError(
     }
 );
 
-interface IUpdateProfilePicture{
+interface IUpdateProfilePicture {
     avatar: string;
 }
 
 export const updateProfilePicture = CatchAsyncError(
     async (req: Request, res: Response, next: NextFunction) => {
         try {
+            res.setHeader('Access-Control-Allow-Origin', 'https://kashi-learning-client.vercel.app');
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, *');
             const { avatar } = req.body;
             const userId = req.user?._id;
 
@@ -374,8 +378,8 @@ export const updateProfilePicture = CatchAsyncError(
                 if (redis) {
                     await redis.set(String(userId), JSON.stringify(updatedUser));
                 }
-            } catch (redisError) {
-                console.warn("Redis update skipped:", redisError.message);
+            } catch (redisError: any) { // ← Add type annotation
+                console.warn("Redis update skipped:", redisError.message || String(redisError));
             }
 
             res.status(200).json({
@@ -397,111 +401,111 @@ export const updateProfilePicture = CatchAsyncError(
 );
 
 export const getAllUsers = CatchAsyncError(
-    async(req: Request , res: Response , next: NextFunction) => {
-        try{
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
             getAllUsersService(res);
-        }catch(error : any){
-            return next(new ErrorHandler(error.message , 400))
+        } catch (error: any) {
+            return next(new ErrorHandler(error.message, 400))
         }
     }
 );
 
 export const updateUserRole = CatchAsyncError(async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { userId, role } = req.body; // Should be userId, not id
-    
-    console.log("🔄 Updating user role:", { userId, role });
-    
-    if (!userId || !role) {
-      return next(new ErrorHandler("User ID and role are required", 400));
+    try {
+        const { userId, role } = req.body; // Should be userId, not id
+
+        console.log("🔄 Updating user role:", { userId, role });
+
+        if (!userId || !role) {
+            return next(new ErrorHandler("User ID and role are required", 400));
+        }
+
+        // Find user
+        const user = await userModel.findById(userId);
+
+        if (!user) {
+            return next(new ErrorHandler("User not found", 404));
+        }
+
+        // Update role
+        user.role = role;
+        await user.save();
+
+        // ✅ CRITICAL: Update in Redis (for current sessions)
+        await redis.set(userId, JSON.stringify(user));
+        console.log("✅ Updated user in Redis:", user.role);
+
+        // ✅ Generate NEW tokens with updated role
+        const accessToken = jwt.sign(
+            { _id: user._id },
+            process.env.ACCESS_TOKEN as string,
+            { expiresIn: "5m" }
+        );
+
+        const refreshToken = jwt.sign(
+            { _id: user._id },
+            process.env.REFRESH_TOKEN as string,
+            { expiresIn: "3d" }
+        );
+
+        // ✅ Set new cookies (if API call is from browser)
+        res.cookie("access_token", accessToken, {
+            expires: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax"
+        });
+
+        res.cookie("refresh_token", refreshToken, {
+            expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax"
+        });
+
+        // ✅ Return success response with new tokens
+        res.status(200).json({
+            success: true,
+            message: `User role updated to ${role}`,
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar,
+                isVerified: user.isVerified
+            },
+            accessToken, // ✅ Send new tokens in response
+            refreshToken
+        });
+
+    } catch (error: any) {
+        console.error("❌ Update role error:", error);
+        return next(new ErrorHandler(error.message, 400));
     }
-
-    // Find user
-    const user = await userModel.findById(userId);
-    
-    if (!user) {
-      return next(new ErrorHandler("User not found", 404));
-    }
-
-    // Update role
-    user.role = role;
-    await user.save();
-
-    // ✅ CRITICAL: Update in Redis (for current sessions)
-    await redis.set(userId, JSON.stringify(user));
-    console.log("✅ Updated user in Redis:", user.role);
-
-    // ✅ Generate NEW tokens with updated role
-    const accessToken = jwt.sign(
-      { _id: user._id },
-      process.env.ACCESS_TOKEN as string,
-      { expiresIn: "5m" }
-    );
-
-    const refreshToken = jwt.sign(
-      { _id: user._id },
-      process.env.REFRESH_TOKEN as string,
-      { expiresIn: "3d" }
-    );
-
-    // ✅ Set new cookies (if API call is from browser)
-    res.cookie("access_token", accessToken, {
-      expires: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax"
-    });
-
-    res.cookie("refresh_token", refreshToken, {
-      expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax"
-    });
-
-    // ✅ Return success response with new tokens
-    res.status(200).json({
-      success: true,
-      message: `User role updated to ${role}`,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatar: user.avatar,
-        isVerified: user.isVerified
-      },
-      accessToken, // ✅ Send new tokens in response
-      refreshToken
-    });
-
-  } catch (error: any) {
-    console.error("❌ Update role error:", error);
-    return next(new ErrorHandler(error.message, 400));
-  }
 });
 
 export const deleteUser = CatchAsyncError(
-    async (req: Request, res: Response , next :NextFunction) => {
-        try{
-            const {id} = req.params;
+    async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { id } = req.params;
 
             const user = await userModel.findById(id);
 
-            if(!user){
-                return next (new ErrorHandler("User not found",404));
+            if (!user) {
+                return next(new ErrorHandler("User not found", 404));
             }
 
             await user.deleteOne({ id });
-            
+
             await redis.del(id);
 
             res.status(200).json({
                 success: true,
                 message: "User deleted successfully",
             });
-        } catch (error: any){
-            return next (new ErrorHandler (error.message, 400));
+        } catch (error: any) {
+            return next(new ErrorHandler(error.message, 400));
         }
     }
 );

@@ -1,3 +1,5 @@
+//“How should requests enter my backend, pass through security & middleware,
+// reach routes, and safely return responses?”
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -37,7 +39,7 @@ const corsOptions = {
   exposedHeaders: ['Set-Cookie']
 };
 
-app.use(cors(corsOptions));
+app.use(cors({origin:['https://kashi-learning-client.vercel.app', 'http://localhost:3000'], credentials:true}));
 app.options('*', cors(corsOptions));
 
 const limiter = rateLimit({
@@ -75,6 +77,15 @@ app.get("/health", (_: Request, res: Response) => {
     status: "healthy",
     timestamp: new Date().toISOString(),
     service: "E-Learning API",
+    uptime: process.uptime()
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
 });

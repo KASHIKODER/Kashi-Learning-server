@@ -15,7 +15,6 @@ const sendMail_1 = __importDefault(require("../utils/sendMail"));
 const jwt_1 = require("../utils/jwt");
 const redis_1 = require("../utils/redis");
 const user_service_1 = require("../services/user.service");
-const cloudinary_1 = __importDefault(require("cloudinary"));
 exports.registrationUser = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
         const { name, email, password } = req.body;
@@ -235,41 +234,55 @@ exports.updatePassword = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res
 });
 exports.updateProfilePicture = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {
     try {
+        res.setHeader('Access-Control-Allow-Origin', 'https://kashi-learning-client.vercel.app');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, *');
         const { avatar } = req.body;
         const userId = req.user?._id;
-        const user = await user_model_1.default.findById(userId);
-        if (avatar && user) {
-            if (user?.avatar?.public_id) {
-                await cloudinary_1.default.v2.uploader.destroy(user?.avatar?.public_id);
-                const myCloud = await cloudinary_1.default.v2.uploader.upload(avatar, {
-                    folder: "avatars",
-                    width: 150,
-                });
-                user.avatar = {
-                    public_id: myCloud.public_id,
-                    url: myCloud.secure_url,
-                };
+        // Validate input
+        if (!avatar || !userId) {
+            return next(new ErrorHandler_1.default("Missing required fields", 400));
+        }
+        // Use findByIdAndUpdate with options to bypass validation
+        const updatedUser = await user_model_1.default.findByIdAndUpdate(userId, {
+            $set: {
+                "avatar.url": avatar,
+                "avatar.public_id": `avatar_${userId}_${Date.now()}`,
+                updatedAt: new Date()
             }
-            else {
-                const myCloud = await cloudinary_1.default.v2.uploader.upload(avatar, {
-                    folder: "avatars",
-                    width: 150,
-                });
-                user.avatar = {
-                    public_id: myCloud.public_id,
-                    url: myCloud.secure_url,
-                };
+        }, {
+            new: true, // Return updated document
+            runValidators: false, // IMPORTANT: Skip Mongoose validation
+            context: 'query', // Better performance
+            select: '-password -refreshToken' // Exclude sensitive fields
+        });
+        if (!updatedUser) {
+            return next(new ErrorHandler_1.default("User not found", 404));
+        }
+        // Update Redis (optional, skip if causing issues)
+        try {
+            if (redis_1.redis) {
+                await redis_1.redis.set(String(userId), JSON.stringify(updatedUser));
             }
         }
-        await user?.save();
-        await redis_1.redis.set(String(user?._id), JSON.stringify(user));
+        catch (redisError) { // ← Add type annotation
+            console.warn("Redis update skipped:", redisError.message || String(redisError));
+        }
         res.status(200).json({
             success: true,
-            user,
+            message: "Avatar updated successfully",
+            user: {
+                _id: updatedUser._id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                avatar: updatedUser.avatar
+            }
         });
     }
     catch (error) {
-        return next(new ErrorHandler_1.default(error.message, 400));
+        console.error("Update avatar error:", error.message);
+        return next(new ErrorHandler_1.default(error.message, 500));
     }
 });
 exports.getAllUsers = (0, catchAsyncErrors_1.CatchAsyncError)(async (req, res, next) => {

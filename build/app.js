@@ -26,8 +26,15 @@ exports.app.use((0, cookie_parser_1.default)());
 const corsOptions = {
     origin: ["https://kashi-learning-client.vercel.app", "http://localhost:3000"],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'Accept'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'Cookie',
+        'Accept',
+        'Cache-Control',
+        'X-Request-Type'
+    ],
     exposedHeaders: ['Set-Cookie']
 };
 exports.app.use((0, cors_1.default)(corsOptions));
